@@ -1,0 +1,22 @@
+repos:
+-   repo: https://github.com/ambv/black
+    rev: 19.10b0
+    hooks:
+    - id: black
+      args: [--line-length=88, --safe]
+      language: python_venv
+      language_version: python3
+      files: ^(src/.*\.py|tests/.*\.py)
+-   repo: https://github.com/timothycrosley/isort
+    rev: 4.3.21-2
+    hooks:
+    - id: isort
+      language: python_venv
+      language_version: python3
+      files: ^(src/.*\.py|tests/.*\.py)
+-   repo: git://github.com/antonbabenko/pre-commit-terraform
+    rev: v1.19.0
+    hooks:
+    - id: terraform_fmt
+      files: ^(.*\.tf)
+
