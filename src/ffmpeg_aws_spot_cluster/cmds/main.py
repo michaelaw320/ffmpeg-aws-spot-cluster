@@ -1,7 +1,9 @@
 import os
-import time
+import shlex
+import subprocess
 from multiprocessing import Pool
 from pathlib import PurePath, Path
+from random import randint
 from typing import List
 
 import attr
@@ -11,11 +13,12 @@ from ffmpeg_aws_spot_cluster.libs.config import (
     load_cluster_config,
     load_encoder_config,
 )
-from ffmpeg_aws_spot_cluster.libs.s3 import S3, S3Object, S3Path
+from ffmpeg_aws_spot_cluster.libs.s3 import S3, S3Object
 
 
 WORKING_INPUT_DIR = "workingInput"
 WORKING_OUTPUT_DIR = "workingOutput"
+LOGS_DIR = "/tmp/logs"
 
 
 def build_node_joblist(cluster_config: ClusterConfig, s3_client: S3) -> List[S3Object]:
@@ -25,6 +28,7 @@ def build_node_joblist(cluster_config: ClusterConfig, s3_client: S3) -> List[S3O
 
 
 def do_in_child_process(job: S3Object):
+    child_num = randint(0, 1000)
     cluster_config = load_cluster_config()
     encoder_config = load_encoder_config()
     job_path_without_prefix = job.path.key.replace(cluster_config.input_s3_path.key, "")
@@ -43,7 +47,7 @@ def do_in_child_process(job: S3Object):
         ),
     )
     print(
-        f"{'='*15}Child{'='*15}\n"
+        f"{'='*15}Child {child_num}{'='*15}\n"
         f"Cluster Configuration: {cluster_config}\n"
         f"Encoder Configuration: {encoder_config}\n"
         f"Processing File: {job}\n"
@@ -55,14 +59,30 @@ def do_in_child_process(job: S3Object):
     s3 = S3()
     input_file.parent.mkdir(parents=True, exist_ok=True)
     output_file.parent.mkdir(parents=True, exist_ok=True)
-    print("Downloading")
+    print(f"[{child_num}] Downloading")
     s3.download_file(job.path, input_file)
-    print("Copying")
-    from shutil import copyfile
 
-    copyfile(os.fspath(input_file), os.fspath(output_file))
-    print("Uploading")
+    cmd = f"{encoder_config.ffmpeg_bin_path} -y -i '{input_file}' {encoder_config.video_opts} {encoder_config.audio_opts} {encoder_config.subs_opts if encoder_config.subs_opts else ' '} '{output_file}'"
+    args = shlex.split(cmd)
+    print(f"[{child_num}] Encoding... invoking subprocess with args {args}")
+    with open(f"{LOGS_DIR}/{input_file.with_suffix('.log').name}", "w+") as log:
+        subprocess.run(args, stdout=log, stderr=log)
+
+    print(f"[{child_num}] Uploading")
     s3.upload_file(output_file, output_s3_path)
+
+    print(
+        f"[{child_num}] Deleting temporary working files:\n {input_file}\n {output_file}\n"
+    )
+    remove_file(input_file)
+    remove_file(output_file)
+
+
+def remove_file(fpath: Path):
+    try:
+        fpath.unlink()
+    except FileNotFoundError:
+        pass
 
 
 @click.command()
@@ -77,6 +97,7 @@ def main():
     print(f"Preparing working directories...")
     Path(cluster_config.workdir, WORKING_INPUT_DIR).mkdir(parents=True, exist_ok=True)
     Path(cluster_config.workdir, WORKING_OUTPUT_DIR).mkdir(parents=True, exist_ok=True)
+    Path(LOGS_DIR).mkdir(parents=True, exist_ok=True)
     with Pool(processes=cluster_config.process_pool) as pool:
         pool.map(do_in_child_process, joblist)
     print("Done")
