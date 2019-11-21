@@ -10,6 +10,7 @@ from ffmpeg_aws_spot_cluster.libs.s3 import S3Path, parse_s3_path
 class ClusterConfig:
     node_num: int
     total_nodes: int
+    process_pool: int
     input_s3_path: S3Path = attr.ib(converter=parse_s3_path)
     output_s3_path: S3Path = attr.ib(converter=parse_s3_path)
     workdir: str = "/root"
@@ -48,4 +49,13 @@ def load_encoder_config() -> EncoderConfig:
     or custom location defined by env var `ENCODER_CONFIG_PATH`
     :return: EncoderConfig
     """
-    pass
+    if os.environ.get("ENCODER_CONFIG_PATH"):
+        fpath = os.environ["ENCODER_CONFIG_PATH"]
+    else:
+        fpath = "/root/encoder-config.json"
+    with open(fpath, "r") as f:
+        try:
+            content = json.loads(f.read())
+            return EncoderConfig(**content)
+        except JSONDecodeError:
+            raise RuntimeError("Failed to load encoder config, check config file")

@@ -1,3 +1,5 @@
+import os
+from pathlib import Path
 from urllib.parse import urlparse
 
 import attr
@@ -34,10 +36,7 @@ class S3:
     client = boto3.client("s3")
 
     def ls(self, path: S3Path):
-        kwargs = {
-            "Bucket": path.bucket,
-            "Prefix": path.key,
-        }
+        kwargs = {"Bucket": path.bucket, "Prefix": path.key}
         while True:
             response = self.client.list_objects_v2(**kwargs)
             for content in response["Contents"]:
@@ -56,10 +55,14 @@ class S3:
     def ls_sorted(self, path: S3Path):
         """
         ls s3 sorted by size ascending
-        :param path:
-        :return:
         """
         return sorted([obj for obj in self.ls(path)], key=lambda obj: obj.size)
 
-    def download_file(self, path: S3Path):
-        pass
+    def download_file(self, s3_path: S3Path, fs_path: Path):
+        fs_path.parent.mkdir(parents=True, exist_ok=True)
+        with fs_path.open("wb+") as data:
+            self.client.download_fileobj(s3_path.bucket, s3_path.key, data)
+
+    def upload_file(self, fs_path: Path, s3_path: S3Path):
+        with fs_path.open("rb") as data:
+            self.client.upload_fileobj(data, s3_path.bucket, s3_path.key)
