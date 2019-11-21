@@ -3,6 +3,11 @@ Configurable one-time run and self cleanup of ffmpeg running on AWS EC2 Spot. Ai
 
 Python Version: >3.5
 
+## Basic Idea
+
+![alt text](docs/idea.png "Idea")
+
+
 ## Development Getting Started
 
 ### pre-commit

@@ -7,13 +7,6 @@ repos:
       language: python_venv
       language_version: python3
       files: ^(src/.*\.py|tests/.*\.py)
--   repo: https://github.com/timothycrosley/isort
-    rev: 4.3.21-2
-    hooks:
-    - id: isort
-      language: python_venv
-      language_version: python3
-      files: ^(src/.*\.py|tests/.*\.py)
 -   repo: git://github.com/antonbabenko/pre-commit-terraform
     rev: v1.19.0
     hooks:
