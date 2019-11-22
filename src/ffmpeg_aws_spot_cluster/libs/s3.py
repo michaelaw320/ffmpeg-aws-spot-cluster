@@ -66,7 +66,7 @@ class S3:
 
     def upload_file(self, fs_path: Path, s3_path: S3Path):
         try:
-            mimetype = mimetypes.MimeTypes().guess_type(fs_path)[0]
+            mimetype = mimetypes.MimeTypes().guess_type(str(fs_path))[0]
         except Exception as e:
             mimetype = None
         with fs_path.open("rb") as data:
