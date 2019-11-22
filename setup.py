@@ -7,10 +7,12 @@ setup(
     package_dir={"": "src"},
     entry_points={
         "console_scripts": [
-            "hello-world = hello_world.cli:main",
+            "start-encode = ffmpeg_aws_spot_cluster.cmds.main:main",
         ],
     },
     install_requires=[
         "boto3",
+        "click",
+        "attrs",
     ],
 )

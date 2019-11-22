@@ -1,0 +1,9 @@
+{
+    "encoder_process": 2,
+    "ffmpeg_options": "",
+    "infile_options": "",
+    "video_options": "-c:v copy",
+    "audio_options": "-c:a copy",
+    "outfile_options": "",
+    "output_extension": ".mp4"
+}
