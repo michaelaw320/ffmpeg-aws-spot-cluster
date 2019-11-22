@@ -108,8 +108,10 @@ def do_in_child_process(job: S3Object):
 def main():
     print("Loading ClusterConfig")
     cluster_config = load_cluster_config()
-    encoder_config = load_encoder_config()
     print(f"Cluster configuration: {cluster_config}")
+    print("Loading EncoderConfig")
+    encoder_config = load_encoder_config()
+    print(f"Encoder configuration: {encoder_config}")
     print(f"Building Joblist...")
     s3 = S3()
     joblist = build_node_joblist(cluster_config, s3)
