@@ -1,3 +1,4 @@
+import mimetypes
 import os
 from pathlib import Path
 from urllib.parse import urlparse
@@ -64,5 +65,14 @@ class S3:
             self.client.download_fileobj(s3_path.bucket, s3_path.key, data)
 
     def upload_file(self, fs_path: Path, s3_path: S3Path):
+        try:
+            mimetype = mimetypes.MimeTypes().guess_type(fs_path)[0]
+        except Exception as e:
+            mimetype = None
         with fs_path.open("rb") as data:
-            self.client.upload_fileobj(data, s3_path.bucket, s3_path.key)
+            extra_args = {}
+            if mimetype:
+                extra_args["ContentType"] = mimetype
+            self.client.upload_fileobj(
+                data, s3_path.bucket, s3_path.key, ExtraArgs=extra_args
+            )

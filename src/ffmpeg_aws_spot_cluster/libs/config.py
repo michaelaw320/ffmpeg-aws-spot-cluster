@@ -10,19 +10,21 @@ from ffmpeg_aws_spot_cluster.libs.s3 import S3Path, parse_s3_path
 class ClusterConfig:
     node_num: int
     total_nodes: int
-    process_pool: int
     input_s3_path: S3Path = attr.ib(converter=parse_s3_path)
     output_s3_path: S3Path = attr.ib(converter=parse_s3_path)
-    workdir: str = "/root"
 
 
 @attr.s(frozen=True, auto_attribs=True)
 class EncoderConfig:
-    video_opts: str
-    audio_opts: str
-    subs_opts: str
-    output_container: str
+    video_options: str
+    audio_options: str
+    output_extension: str
+    encoder_process: int = 1
+    ffmpeg_options: str = ""
+    infile_options: str = ""
+    outfile_options: str = ""
     ffmpeg_bin_path: str = "ffmpeg"
+    working_directory: str = "/root"
 
 
 def load_cluster_config() -> ClusterConfig:

@@ -1,6 +1,9 @@
 {
-    "video_opts": "-c:v copy",
-    "audio_opts": "-c:a copy",
-    "subs_opts": "",
-    "output_container": ".mp4"
+    "encoder_process": 2,
+    "ffmpeg_options": "",
+    "infile_options": "",
+    "video_options": "-c:v copy",
+    "audio_options": "-c:a copy",
+    "outfile_options": "",
+    "output_extension": ".mp4"
 }

@@ -1,9 +1,9 @@
 import os
 import shlex
 import subprocess
+import time
 from multiprocessing import Pool
 from pathlib import PurePath, Path
-from random import randint
 from typing import List
 
 import attr
@@ -14,7 +14,7 @@ from ffmpeg_aws_spot_cluster.libs.config import (
     load_encoder_config,
 )
 from ffmpeg_aws_spot_cluster.libs.s3 import S3, S3Object
-
+from ffmpeg_aws_spot_cluster.libs.utils import remove_file
 
 WORKING_INPUT_DIR = "workingInput"
 WORKING_OUTPUT_DIR = "workingOutput"
@@ -28,25 +28,32 @@ def build_node_joblist(cluster_config: ClusterConfig, s3_client: S3) -> List[S3O
 
 
 def do_in_child_process(job: S3Object):
-    child_num = randint(0, 1000)
+    child_num = os.getpid()
     cluster_config = load_cluster_config()
     encoder_config = load_encoder_config()
+
     job_path_without_prefix = job.path.key.replace(cluster_config.input_s3_path.key, "")
     input_file = Path(
-        cluster_config.workdir, WORKING_INPUT_DIR, job_path_without_prefix
+        encoder_config.working_directory, WORKING_INPUT_DIR, job_path_without_prefix
     )
     output_file = Path(
-        cluster_config.workdir, WORKING_OUTPUT_DIR, job_path_without_prefix
-    ).with_suffix(encoder_config.output_container)
+        encoder_config.working_directory, WORKING_OUTPUT_DIR, job_path_without_prefix
+    ).with_suffix(encoder_config.output_extension)
+    log_file = Path(LOGS_DIR, job_path_without_prefix).with_suffix(".txt")
+
     output_s3_path = attr.evolve(
         cluster_config.output_s3_path,
         key=str(
             PurePath(
                 cluster_config.output_s3_path.key, job_path_without_prefix
-            ).with_suffix(encoder_config.output_container)
+            ).with_suffix(encoder_config.output_extension)
         ),
     )
-    print(
+    output_s3_log = attr.evolve(
+        output_s3_path, key=str(PurePath(output_s3_path.key).with_suffix(".txt"))
+    )
+
+    configuration_string = (
         f"{'='*15}Child {child_num}{'='*15}\n"
         f"Cluster Configuration: {cluster_config}\n"
         f"Encoder Configuration: {encoder_config}\n"
@@ -56,19 +63,38 @@ def do_in_child_process(job: S3Object):
         f"Will be on S3: {output_s3_path}\n"
         f"{'='*35}\n"
     )
+    print(configuration_string)
+
     s3 = S3()
     input_file.parent.mkdir(parents=True, exist_ok=True)
     output_file.parent.mkdir(parents=True, exist_ok=True)
+    log_file.parent.mkdir(parents=True, exist_ok=True)
     print(f"[{child_num}] Downloading")
     s3.download_file(job.path, input_file)
 
-    cmd = f"{encoder_config.ffmpeg_bin_path} -y -i '{input_file}' {encoder_config.video_opts} {encoder_config.audio_opts} {encoder_config.subs_opts if encoder_config.subs_opts else ' '} '{output_file}'"
+    cmd = (
+        f"{encoder_config.ffmpeg_bin_path} "
+        f"-y -nostdin "
+        f"{encoder_config.ffmpeg_options if encoder_config.ffmpeg_options else ''} "
+        f"{encoder_config.infile_options if encoder_config.infile_options else ''} "
+        f"-i '{input_file}' "
+        f"{encoder_config.video_options} "
+        f"{encoder_config.audio_options} "
+        f"{encoder_config.outfile_options if encoder_config.outfile_options else ''} "
+        f"'{output_file}'"
+    )
     args = shlex.split(cmd)
     print(f"[{child_num}] Encoding... invoking subprocess with args {args}")
-    with open(f"{LOGS_DIR}/{input_file.with_suffix('.log').name}", "w+") as log:
+    start_time = time.monotonic()
+    with log_file.open("w+") as log:
+        log.write(configuration_string)
+        log.write(f"\nffmpeg invocation: {args}\n\n")
+        log.flush()
         subprocess.run(args, stdout=log, stderr=log)
+        log.write(f"\n\nTook {time.monotonic()-start_time} seconds to encode\n\n")
 
     print(f"[{child_num}] Uploading")
+    s3.upload_file(log_file, output_s3_log)
     s3.upload_file(output_file, output_s3_path)
 
     print(
@@ -78,27 +104,25 @@ def do_in_child_process(job: S3Object):
     remove_file(output_file)
 
 
-def remove_file(fpath: Path):
-    try:
-        fpath.unlink()
-    except FileNotFoundError:
-        pass
-
-
 @click.command()
 def main():
     print("Loading ClusterConfig")
     cluster_config = load_cluster_config()
+    encoder_config = load_encoder_config()
     print(f"Cluster configuration: {cluster_config}")
     print(f"Building Joblist...")
     s3 = S3()
     joblist = build_node_joblist(cluster_config, s3)
     print(f"This node joblist: {joblist}")
     print(f"Preparing working directories...")
-    Path(cluster_config.workdir, WORKING_INPUT_DIR).mkdir(parents=True, exist_ok=True)
-    Path(cluster_config.workdir, WORKING_OUTPUT_DIR).mkdir(parents=True, exist_ok=True)
+    Path(encoder_config.working_directory, WORKING_INPUT_DIR).mkdir(
+        parents=True, exist_ok=True
+    )
+    Path(encoder_config.working_directory, WORKING_OUTPUT_DIR).mkdir(
+        parents=True, exist_ok=True
+    )
     Path(LOGS_DIR).mkdir(parents=True, exist_ok=True)
-    with Pool(processes=cluster_config.process_pool) as pool:
+    with Pool(processes=encoder_config.encoder_process) as pool:
         pool.map(do_in_child_process, joblist)
     print("Done")
 
