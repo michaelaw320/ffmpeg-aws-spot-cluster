@@ -1,6 +1,7 @@
 {
     "node_num": 0,
     "total_nodes": 1,
+    "ffmpeg_bin_path": "ffmpeg",
     "input_s3_path": "s3://bucket_name/input_folder/",
     "output_s3_path": "s3://bucket_name/output_folder/"
 }

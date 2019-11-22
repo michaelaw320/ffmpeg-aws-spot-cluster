@@ -12,6 +12,7 @@ class ClusterConfig:
     total_nodes: int
     input_s3_path: S3Path = attr.ib(converter=parse_s3_path)
     output_s3_path: S3Path = attr.ib(converter=parse_s3_path)
+    ffmpeg_bin_path: str = "ffmpeg"
 
 
 @attr.s(frozen=True, auto_attribs=True)
@@ -23,7 +24,6 @@ class EncoderConfig:
     ffmpeg_options: str = ""
     infile_options: str = ""
     outfile_options: str = ""
-    ffmpeg_bin_path: str = "ffmpeg"
     working_directory: str = "/root"
 
 

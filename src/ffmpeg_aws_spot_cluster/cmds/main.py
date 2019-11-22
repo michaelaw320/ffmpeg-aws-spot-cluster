@@ -73,7 +73,7 @@ def do_in_child_process(job: S3Object):
     s3.download_file(job.path, input_file)
 
     cmd = (
-        f"{encoder_config.ffmpeg_bin_path} "
+        f"{cluster_config.ffmpeg_bin_path} "
         f"-y -nostdin "
         f"{encoder_config.ffmpeg_options if encoder_config.ffmpeg_options else ''} "
         f"{encoder_config.infile_options if encoder_config.infile_options else ''} "
