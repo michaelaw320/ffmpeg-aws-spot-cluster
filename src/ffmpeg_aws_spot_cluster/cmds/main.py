@@ -14,6 +14,7 @@ from ffmpeg_aws_spot_cluster.libs.config import (
     load_cluster_config,
     load_encoder_config,
 )
+from ffmpeg_aws_spot_cluster.libs.ec2 import cancel_spot_request
 from ffmpeg_aws_spot_cluster.libs.s3 import S3, S3Object
 from ffmpeg_aws_spot_cluster.libs.utils import remove_file, retry, Retry
 
@@ -136,6 +137,8 @@ def main():
     with Pool(processes=encoder_config.encoder_process) as pool:
         print(f"Started {encoder_config.encoder_process} Process as Pool")
         pool.map(do_in_child_process, joblist)
+
+    cancel_spot_request()
     print("Done")
 
 
