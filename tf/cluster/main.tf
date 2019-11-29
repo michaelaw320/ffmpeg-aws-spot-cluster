@@ -25,6 +25,7 @@ data "terraform_remote_state" "common" {
   config = {
     bucket = var.common_infrastructure_tfstate_bucket
     key    = var.common_infrastructure_tfstate_key
+    region = var.common_infrastructure_bucket_region
   }
 }
 

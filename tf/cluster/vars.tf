@@ -10,6 +10,10 @@ variable "common_infrastructure_tfstate_key" {
   description = "S3 path key where the common terraform state resides"
 }
 
+variable "common_infrastructure_bucket_region" {
+  description = "S3 region where the common terraform state resides"
+}
+
 variable "input_s3_path" {
   description = "Input folder on S3 including trailing /"
 }

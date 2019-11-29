@@ -20,6 +20,7 @@ terraform {
   backend "s3" {
     bucket = "your-bucket-here"
     key    = "where-in-bucket-youd-store-the-state"
+    region = "the-s3-bucket-region"
   }
 }
 

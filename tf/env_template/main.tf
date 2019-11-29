@@ -11,6 +11,7 @@ terraform {
   backend "s3" {
     bucket = "where-you-want-to-put-state-in"
     key    = "where-you-want-to-put-state-in"
+    region = "the-s3-region"
   }
 }
 
@@ -20,7 +21,8 @@ module "cluster" {
   prefix = "created-resources-prefix"
 
   common_infrastructure_tfstate_bucket = "which-bucket-did-you-put-your-common-tfstate-in"
-  common_infrastructure_tfstate_key    = "same-one-as-you-defined-on-the-backend-section-in-common"
+  common_infrastructure_tfstate_key    = "same/one/as/you-defined-on-the-backend-section-in-common.tfstate"
+  common_infrastructure_bucket_region  = "same-one-as-defined-in-common"
 
   encoder_setting_s3_path = "s3://bucket-name/encoder-config.json"
   instance_count          = 1
